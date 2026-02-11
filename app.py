@@ -35,65 +35,37 @@ def poner_numero(page, numero, digitos=7, font_size=10, margen_derecho=15, marge
 
 def numerar_pdf(input_path, output_path, modo, digitos=7):
     reader = PdfReader(input_path)
-    total_pages = len(reader.pages)
-
-    paginas_finales = [None] * total_pages
-
-    if modo == "todas":
-        # TODAS: última=1, anterior=2...
-        contador = 1
-        for idx in range(total_pages - 1, -1, -1):
-            page = reader.pages[idx]
-            page = poner_numero(page, contador, digitos=digitos)
-            paginas_finales[idx] = page
-            contador += 1
-
-        # completar (aunque ya están todas)
-        for i in range(total_pages):
-            if paginas_finales[i] is None:
-                paginas_finales[i] = reader.pages[i]
-
-    elif modo == "impares":
-        # SOLO IMPARES: última impar=1, anterior impar=2...
-        impares = [p for p in range(1, total_pages + 1) if p % 2 == 1]  # 1-based
-        contador = 1
-        for p in reversed(impares):
-            idx = p - 1
-            page = reader.pages[idx]
-            page = poner_numero(page, contador, digitos=digitos)
-            paginas_finales[idx] = page
-            contador += 1
-
-        # las demás quedan igual (sin número)
-        for i in range(total_pages):
-            if paginas_finales[i] is None:
-                paginas_finales[i] = reader.pages[i]
-
-    elif modo == "pares":
-        # SOLO PARES: última par=1, anterior par=2...
-        pares = [p for p in range(1, total_pages + 1) if p % 2 == 0]  # 1-based
-        contador = 1
-        for p in reversed(pares):
-            idx = p - 1
-            page = reader.pages[idx]
-            page = poner_numero(page, contador, digitos=digitos)
-            paginas_finales[idx] = page
-            contador += 1
-
-        # las demás quedan igual (sin número)
-        for i in range(total_pages):
-            if paginas_finales[i] is None:
-                paginas_finales[i] = reader.pages[i]
-
-    else:
-        raise ValueError("Modo no reconocido.")
-
     writer = PdfWriter()
-    for p in paginas_finales:
-        writer.add_page(p)
+    total = len(reader.pages)
+
+    contador = 1
+
+    for i in range(total):
+        page = reader.pages[i]
+        numero_pagina_real = i + 1
+        numero_desde_final = total - i
+
+        if modo == "todas":
+            numero = numero_desde_final
+            page = poner_numero(page, numero, digitos)
+
+        elif modo == "impares":
+            if numero_pagina_real % 2 == 1:
+                numero = numero_desde_final
+                page = poner_numero(page, contador, digitos)
+                contador += 1
+
+        elif modo == "pares":
+            if numero_pagina_real % 2 == 0:
+                numero = numero_desde_final
+                page = poner_numero(page, contador, digitos)
+                contador += 1
+
+        writer.add_page(page)
 
     with open(output_path, "wb") as f:
         writer.write(f)
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
