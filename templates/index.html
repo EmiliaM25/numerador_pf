@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Numerar PDF</title>
+  <style>
+    body{font-family:Arial;background:#f4f4f4;padding:40px;}
+    .box{background:#fff;padding:25px;max-width:520px;margin:auto;border-radius:10px;}
+    label{display:block;margin-top:10px;}
+    button{margin-top:18px;padding:10px 16px;cursor:pointer;}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Numerar PDF (Superior derecha)</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+      <label><b>Sube tu PDF:</b></label>
+      <input type="file" name="pdf" accept="application/pdf" required>
+
+      <label><b>Elige qué páginas numerar (desde la última):</b></label>
+
+      <label>
+        <input type="radio" name="modo" value="todas" checked>
+        1) TODAS las páginas (última = 0000001)
+      </label>
+
+      <label>
+        <input type="radio" name="modo" value="impares">
+        2) SOLO IMPARES (última impar = 0000001)
+      </label>
+
+      <label>
+        <input type="radio" name="modo" value="pares">
+        3) SOLO PARES (última par = 0000001)
+      </label>
+
+      <button type="submit">Subir y numerar</button>
+    </form>
+  </div>
+</body>
+</html>
