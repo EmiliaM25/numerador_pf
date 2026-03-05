@@ -113,18 +113,24 @@ def index():
         if not file:
             return "No se subió ningún PDF", 400
 
-        numero_inicial = int(request.form.get("numero_inicial", "1"))
         digitos = int(request.form.get("digitos", "7"))
         direccion = request.form.get("direccion", "desde_ultima")
-        modo = request.form.get("modo", "todas")  # <- VIENE DE TU SELECT
+        modo = request.form.get("modo", "todas")  # <-- AÑADIR
 
         filename = f"{uuid.uuid4().hex}.pdf"
         input_path = os.path.join(UPLOAD_FOLDER, filename)
         output_path = os.path.join(OUTPUT_FOLDER, f"numerado_{filename}")
 
         file.save(input_path)
-
-        # Elegir modo
+        numerar_pdf(
+            input_path=input_path,
+            output_path=output_path,
+            numero_inicial=numero_inicial,
+            digitos=digitos,
+            direccion=direccion,
+            modo=modo
+        )
+                # Elegir modo
         if modo == "salto":
             numerar_saltando_una(
                 input_path=input_path,
