@@ -50,6 +50,41 @@ def numerar_todas(input_path, output_path, numero_inicial=1, digitos=7, direccio
     with open(output_path, "wb") as f:
         writer.write(f)
 
+def numerar_saltando_una(input_path, output_path, numero_inicial=1, digitos=7, direccion="desde_ultima"):
+    reader = PdfReader(input_path)
+    writer = PdfWriter()
+    total = len(reader.pages)
+
+    # Selección de páginas a numerar:
+    # - Si direccion = desde_ultima: numerar última, saltar una, numerar, etc.
+    #   Eso equivale a numerar páginas donde (total - i) sea impar.
+    # - Si direccion = desde_primera: numerar primera, saltar una, numerar, etc.
+    #   Eso equivale a numerar páginas donde (i+1) sea impar.
+
+    contador = numero_inicial
+
+    for i in range(total):
+        page = reader.pages[i]
+
+        num_desde_final = total - i      # última=1
+        num_desde_inicio = i + 1         # primera=1
+
+        if direccion == "desde_ultima":
+            # Numerar: última(1), tercera desde el final(3), quinta(5)...
+            numerar_esta = (num_desde_final % 2 == 1)
+        else:
+            # Numerar: 1,3,5...
+            numerar_esta = (num_desde_inicio % 2 == 1)
+
+        if numerar_esta:
+            texto = str(contador).zfill(digitos)
+            page = poner_numero(page, texto)
+            contador += 1
+
+        writer.add_page(page)
+
+    with open(output_path, "wb") as f:
+        writer.write(f)
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -60,6 +95,7 @@ def index():
         numero_inicial = int(request.form.get("numero_inicial", "1"))
         digitos = int(request.form.get("digitos", "7"))
         direccion = request.form.get("direccion", "desde_ultima")
+        modo = request.form.get("modo", "todas")
 
         filename = f"{uuid.uuid4().hex}.pdf"
         input_path = os.path.join(UPLOAD_FOLDER, filename)
@@ -67,6 +103,7 @@ def index():
 
         file.save(input_path)
 
+    if modo == "todas":
         numerar_todas(
             input_path=input_path,
             output_path=output_path,
@@ -74,7 +111,14 @@ def index():
             digitos=digitos,
             direccion=direccion
         )
-
+    else:  # modo == "salto"
+        numerar_saltando_una(
+            input_path=input_path,
+            output_path=output_path,
+            numero_inicial=numero_inicial,
+            digitos=digitos,
+            direccion=direccion
+        )
         return send_file(output_path, as_attachment=True, download_name="PDF_numerado.pdf")
 
     return render_template("index.html")

@@ -162,7 +162,13 @@
             <option value="4">4 dígitos (0001)</option>
           </select>
         </div>
-
+        <div class="field">
+          <label>Páginas a numerar</label>
+          <select name="modo">
+            <option value="todas" selected>Todas las páginas</option>
+            <option value="salto">Saltando una hoja</option>
+          </select>
+        </div>
         <div class="field">
           <label>Dirección</label>
           <select name="direccion">
@@ -193,13 +199,7 @@
       </div>
     </div>
   </div>
-<div class="field">
-<label>Páginas a numerar</label>
-<select name="modo">
-<option value="todas">Todas las páginas</option>
-<option value="salto_final">Saltando una hoja desde el final</option>
-</select>
-</div>
+
   <script>
     const drop = document.getElementById("drop");
     const pickBtn = document.getElementById("pickBtn");
