@@ -29,111 +29,57 @@ def poner_numero(page, texto, font_size=10, margen_derecho=15, margen_superior=1
     return page
 
 def numerar_pdf(input_path, output_path, numero_inicial=1, digitos=7, direccion="desde_ultima", modo="todas"):
+    """
+    modo:
+      - "todas": numera todas las páginas
+      - "salto": numera saltando una hoja, empezando desde la última (última=numero_inicial)
+
+    direccion:
+      - "desde_ultima" o "desde_primera" SOLO aplica en modo "todas"
+      - en modo "salto" siempre es desde la última (como pediste)
+    """
     reader = PdfReader(input_path)
     writer = PdfWriter()
     total = len(reader.pages)
 
-    # 1) Definir qué páginas se numeran (índices 0..total-1)
-    if modo == "todas":
-        indices = list(range(total))
-    elif modo == "salto_final":
-        # Saltando una hoja desde el FINAL: ultima, anteultima-2, etc.
+    # ----------------------------
+    # Selección de páginas a numerar
+    # ----------------------------
+    if modo == "salto":
+        # última, antepenúltima, quinta desde el final... (N-1, N-3, N-5...)
         indices = list(range(total - 1, -1, -2))
-        indices.sort()  # importante: para escribir el PDF en orden normal
-    elif modo == "salto_inicio":
-        # (opcional) saltando desde el inicio: 0,2,4...
-        indices = list(range(0, total, 2))
+        # Numeración consecutiva desde la última
+        mapa_numero = {}
+        n = numero_inicial
+        for idx in indices:  # ya está desde la última hacia atrás
+            mapa_numero[idx] = n
+            n += 1
+
     else:
-        indices = list(range(total))
+        # modo == "todas"
+        mapa_numero = {}
+        if direccion == "desde_ultima":
+            # última = numero_inicial
+            for i in range(total):
+                mapa_numero[i] = numero_inicial + (total - 1 - i)
+        else:
+            # primera = numero_inicial
+            for i in range(total):
+                mapa_numero[i] = numero_inicial + i
 
-    # 2) Calcular numeración SOLO para páginas seleccionadas
-    # Queremos que:
-    # - si direccion="desde_ultima": la última página seleccionada = numero_inicial (y hacia atrás suma)
-    # - si direccion="desde_primera": la primera página seleccionada = numero_inicial (y hacia adelante suma)
-    if direccion == "desde_ultima":
-        indices_orden_numeracion = list(reversed(indices))  # empezamos por la última seleccionada
-    else:
-        indices_orden_numeracion = indices[:]               # empezamos por la primera seleccionada
-
-    mapa_numero = {}
-    n = numero_inicial
-    for idx in indices_orden_numeracion:
-        mapa_numero[idx] = n
-        n += 1
-
-    # 3) Escribir páginas en orden normal y poner número solo donde toca
+    # ----------------------------
+    # Escribir el PDF en orden normal
+    # ----------------------------
     for i in range(total):
         page = reader.pages[i]
-
         if i in mapa_numero:
             texto = str(mapa_numero[i]).zfill(digitos)
             page = poner_numero(page, texto)
-
         writer.add_page(page)
 
     with open(output_path, "wb") as f:
         writer.write(f)
-def numerar_saltando_una(input_path, output_path, numero_inicial=1, digitos=7, direccion="desde_ultima"):
-    """
-    Numerar una página sí / una no, con numeración consecutiva.
-    - desde_ultima: numera última, salta una, numera, ...
-    - desde_primera: numera primera, salta una, numera, ...
-    """
-    reader = PdfReader(input_path)
-    writer = PdfWriter()
-    total = len(reader.pages)
 
-    contador = numero_inicial
-
-    for i in range(total):
-        page = reader.pages[i]
-
-        num_desde_final = total - i   # última=1
-        num_desde_inicio = i + 1      # primera=1
-
-        if direccion == "desde_ultima":
-            numerar_esta = (num_desde_final % 2 == 1)   # 1,3,5 desde el final
-        else:
-            numerar_esta = (num_desde_inicio % 2 == 1)  # 1,3,5 desde el inicio
-
-        if numerar_esta:
-            texto = str(contador).zfill(digitos)
-            page = poner_numero(page, texto)
-            contador += 1
-
-        writer.add_page(page)
-
-    with open(output_path, "wb") as f:
-        writer.write(f)
-def numerar_salto_desde_final(input_path, output_path, numero_inicial=1, digitos=7):
-    """
-    Numerar SOLO estas páginas: última, antepenúltima, quinta desde el final... (N, N-2, N-4...)
-    Y que la última tenga el número inicial (0000001).
-    """
-    reader = PdfReader(input_path)
-    writer = PdfWriter()
-    total = len(reader.pages)
-
-    # índices a numerar: N-1, N-3, N-5... (de atrás hacia adelante)
-    indices_numerar = list(range(total - 1, -1, -2))
-
-    # Mapa: índice_pagina -> numero
-    mapa = {}
-    num = numero_inicial
-    for idx in indices_numerar:         # recorre desde la última seleccionada hacia atrás
-        mapa[idx] = num
-        num += 1
-
-    # Escribir PDF en orden normal, numerando solo donde corresponde
-    for i in range(total):
-        page = reader.pages[i]
-        if i in mapa:
-            texto = str(mapa[i]).zfill(digitos)
-            page = poner_numero(page, texto)
-        writer.add_page(page)
-
-    with open(output_path, "wb") as f:
-        writer.write(f)
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
@@ -141,14 +87,18 @@ def index():
         if not file:
             return "No se subió ningún PDF", 400
 
+        # ✅ FALTABA ESTO EN TU CÓDIGO
+        numero_inicial = int(request.form.get("numero_inicial", "1"))
         digitos = int(request.form.get("digitos", "7"))
         direccion = request.form.get("direccion", "desde_ultima")
-        modo = request.form.get("modo", "todas")
+        modo = request.form.get("modo", "todas")  # "todas" o "salto"
+
         filename = f"{uuid.uuid4().hex}.pdf"
         input_path = os.path.join(UPLOAD_FOLDER, filename)
         output_path = os.path.join(OUTPUT_FOLDER, f"numerado_{filename}")
 
         file.save(input_path)
+
         numerar_pdf(
             input_path=input_path,
             output_path=output_path,
@@ -157,33 +107,7 @@ def index():
             direccion=direccion,
             modo=modo
         )
-                # Elegir modo
-        if modo == "salto":
-            numerar_saltando_una(
-                input_path=input_path,
-                output_path=output_path,
-                numero_inicial=numero_inicial,
-                digitos=digitos,
-                direccion=direccion
-            )
-        else:
-            if modo == "salto":
-                # salto SIEMPRE desde el final (como tú lo quieres)
-                numerar_salto_desde_final(
-                    input_path=input_path,
-                    output_path=output_path,
-                    numero_inicial=numero_inicial,
-                    digitos=digitos
-                )
-            else:
-                numerar_todas(
-                    input_path=input_path,
-                    output_path=output_path,
-                    numero_inicial=numero_inicial,
-                    digitos=digitos,
-                    direccion=direccion
-                )
-            
+
         return send_file(output_path, as_attachment=True, download_name="PDF_numerado.pdf")
 
     return render_template("index.html")
