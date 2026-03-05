@@ -28,28 +28,51 @@ def poner_numero(page, texto, font_size=10, margen_derecho=15, margen_superior=1
         page.merge_page(overlay.pages[0])
     return page
 
-def numerar_todas(input_path, output_path, numero_inicial=1, digitos=7, direccion="desde_ultima"):
+def numerar_pdf(input_path, output_path, numero_inicial=1, digitos=7, direccion="desde_ultima", modo="todas"):
     reader = PdfReader(input_path)
     writer = PdfWriter()
     total = len(reader.pages)
 
+    # 1) Definir qué páginas se numeran (índices 0..total-1)
+    if modo == "todas":
+        indices = list(range(total))
+    elif modo == "salto_final":
+        # Saltando una hoja desde el FINAL: ultima, anteultima-2, etc.
+        indices = list(range(total - 1, -1, -2))
+        indices.sort()  # importante: para escribir el PDF en orden normal
+    elif modo == "salto_inicio":
+        # (opcional) saltando desde el inicio: 0,2,4...
+        indices = list(range(0, total, 2))
+    else:
+        indices = list(range(total))
+
+    # 2) Calcular numeración SOLO para páginas seleccionadas
+    # Queremos que:
+    # - si direccion="desde_ultima": la última página seleccionada = numero_inicial (y hacia atrás suma)
+    # - si direccion="desde_primera": la primera página seleccionada = numero_inicial (y hacia adelante suma)
+    if direccion == "desde_ultima":
+        indices_orden_numeracion = list(reversed(indices))  # empezamos por la última seleccionada
+    else:
+        indices_orden_numeracion = indices[:]               # empezamos por la primera seleccionada
+
+    mapa_numero = {}
+    n = numero_inicial
+    for idx in indices_orden_numeracion:
+        mapa_numero[idx] = n
+        n += 1
+
+    # 3) Escribir páginas en orden normal y poner número solo donde toca
     for i in range(total):
         page = reader.pages[i]
 
-        if direccion == "desde_ultima":
-            # última = numero_inicial
-            numero = numero_inicial + (total - 1 - i)
-        else:
-            # primera = numero_inicial
-            numero = numero_inicial + i
+        if i in mapa_numero:
+            texto = str(mapa_numero[i]).zfill(digitos)
+            page = poner_numero(page, texto)
 
-        texto = str(numero).zfill(digitos)
-        page = poner_numero(page, texto)
         writer.add_page(page)
 
     with open(output_path, "wb") as f:
         writer.write(f)
-
 def numerar_saltando_una(input_path, output_path, numero_inicial=1, digitos=7, direccion="desde_ultima"):
     """
     Numerar una página sí / una no, con numeración consecutiva.
