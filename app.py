@@ -12,7 +12,7 @@ OUTPUT_FOLDER = "outputs"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-def poner_numero(page, texto, font_size=22, margen_derecho=25, margen_superior=25):
+def poner_numero(page, texto, font_size=20, margen_derecho=20, margen_superior=20):
     packet = BytesIO()
     width = float(page.mediabox.width)
     height = float(page.mediabox.height)
